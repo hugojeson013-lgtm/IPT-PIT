@@ -32,11 +32,7 @@ class ExamSubmissionSerializer(serializers.Serializer):
     # Changed to handle either a string (essay) or a list (multiple choice)
     answers = serializers.DictField() 
 
-    def validate(self, data):
-        user = self.context['request'].user
-        if ExamResult.objects.filter(user=user, exam_id=data['exam_id']).exists():
-            raise serializers.ValidationError("You have already attempted this exam.")
-        return data
+
 
     def save(self):
         user = self.context['request'].user

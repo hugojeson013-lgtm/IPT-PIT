@@ -6,6 +6,9 @@ from rest_framework.views import APIView
 from django.contrib.auth import authenticate
 from django.contrib.auth.models import User
 from rest_framework.authtoken.models import Token
+from rest_framework import serializers
+from rest_framework.decorators import api_view, permission_classes
+
 
 from .models import Exam, Question, Option, ExamResult, Profile
 from .serializers import ExamSerializer, ExamSubmissionSerializer, QuestionSerializer
@@ -119,15 +122,28 @@ class QuestionViewSet(viewsets.ModelViewSet):
 
 class SubmitExamView(APIView):
     permission_classes = [IsAuthenticated]
+
     def post(self, request):
-        serializer = ExamSubmissionSerializer(data=request.data, context={'request': request})
+        serializer = ExamSubmissionSerializer(
+            data=request.data,
+            context={'request': request}
+        )
+
         if serializer.is_valid():
-            result = serializer.save()
-            return Response({
-                "score": result.score, 
-                "total": result.exam.questions.count(),
-                "is_passed": result.is_passed
-            }, status=status.HTTP_201_CREATED)
+            try:
+                result = serializer.save()
+                return Response({
+                    "score": result.score,
+                    "total": result.exam.questions.count(),
+                    "is_passed": result.is_passed
+                }, status=status.HTTP_201_CREATED)
+
+            # 🚫 HANDLE "ALREADY TAKEN" ERROR
+            except serializers.ValidationError as e:
+                return Response({
+                    "error": str(e.detail[0])
+                }, status=400)
+
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -181,3 +197,9 @@ def student_results_list(request):
         } for r in results
     ]
     return Response(data)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def has_taken_exam(request, exam_id):
+    taken = ExamResult.objects.filter(user=request.user, exam_id=exam_id).exists()
+    return Response({"taken": taken})
