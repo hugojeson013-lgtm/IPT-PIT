@@ -59,10 +59,17 @@ export default function MainLayout() {
         </div>
 
         <div className="flex items-center gap-4">
-          <div className="text-right hidden sm:block">
-            <p className="text-xs text-slate-400 font-bold uppercase">Logged in as</p>
-            <p className="text-sm font-bold text-slate-900">{username}</p>
-          </div>
+          {!isStaff ? (
+            <Link to="/profile" className={`text-right hidden sm:block p-2 rounded-xl transition ${isActive("/profile") ? "bg-indigo-50 border border-indigo-100" : "hover:bg-slate-100"}`}>
+              <p className="text-xs text-indigo-500 font-bold uppercase">My Profile</p>
+              <p className="text-sm font-bold text-slate-900">{username}</p>
+            </Link>
+          ) : (
+            <div className="text-right hidden sm:block">
+              <p className="text-xs text-slate-400 font-bold uppercase">Logged in as</p>
+              <p className="text-sm font-bold text-slate-900">{username}</p>
+            </div>
+          )}
           <button 
             onClick={handleLogout}
             className="bg-slate-100 hover:bg-red-50 hover:text-red-600 text-slate-600 px-4 py-2 rounded-lg text-sm font-bold transition-colors"

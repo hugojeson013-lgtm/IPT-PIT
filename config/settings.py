@@ -68,19 +68,28 @@ WSGI_APPLICATION = 'config.wsgi.application'
 
 
 # DATABASE (Render PostgreSQL)
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'ipt_pit',
-        'USER': 'ipt_pit_user',
-        'PASSWORD': 'ZJWMoX7kEZKacBmOlHBSJsGjXP3eYmV9',
-        'HOST': 'dpg-d734foh9fqoc73cdn130-a.oregon-postgres.render.com',
-        'PORT': '5432',
-        'OPTIONS': {
-            'sslmode': 'require',
-        },
+# DATABASE (SQLite for local dev, Render PostgreSQL for production)
+if DEBUG:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
     }
-}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': 'ipt_pit',
+            'USER': 'ipt_pit_user',
+            'PASSWORD': 'ZJWMoX7kEZKacBmOlHBSJsGjXP3eYmV9',
+            'HOST': 'dpg-d734foh9fqoc73cdn130-a.oregon-postgres.render.com',
+            'PORT': '5432',
+            'OPTIONS': {
+                'sslmode': 'require',
+            },
+        }
+    }
 # PASSWORD VALIDATION
 AUTH_PASSWORD_VALIDATORS = [
     {

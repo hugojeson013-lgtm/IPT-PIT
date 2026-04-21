@@ -8,7 +8,8 @@ from django.contrib.auth.models import User
 from rest_framework.authtoken.models import Token
 
 from .models import Exam, Question, Option, ExamResult, Profile
-from .serializers import ExamSerializer, ExamSubmissionSerializer, QuestionSerializer
+from .serializers import ExamSerializer, ExamSubmissionSerializer, QuestionSerializer, UserSerializer
+
 
 # --- AUTHENTICATION ---
 
@@ -181,3 +182,29 @@ def student_results_list(request):
         } for r in results
     ]
     return Response(data)
+
+@api_view(['GET', 'PUT'])
+@permission_classes([IsAuthenticated])
+def profile_view(request):
+    user = request.user
+    if request.method == 'GET':
+        serializer = UserSerializer(user)
+        return Response(serializer.data)
+    
+    elif request.method == 'PUT':
+        data = request.data
+        user.email = data.get('email', user.email)
+        user.save()
+        
+        profile = getattr(user, 'profile', None)
+        if profile:
+            profile_data = data.get('profile', {})
+            profile.first_name = profile_data.get('first_name', profile.first_name)
+            profile.middle_name = profile_data.get('middle_name', profile.middle_name)
+            profile.last_name = profile_data.get('last_name', profile.last_name)
+            profile.section = profile_data.get('section', profile.section)
+            profile.school_year = profile_data.get('school_year', profile.school_year)
+            profile.save()
+            
+        serializer = UserSerializer(user)
+        return Response(serializer.data)

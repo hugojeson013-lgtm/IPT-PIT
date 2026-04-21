@@ -36,15 +36,24 @@ export default function AddQuestion() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (newQuestion.question_type === 'MCQ' && !newQuestion.options.some(opt => opt.is_correct)) {
+    
+    // Prepare the payload
+    const payload = { 
+      ...newQuestion, 
+      exam: examId,
+      // Clear options if it's an essay to avoid validation errors
+      options: newQuestion.question_type === 'ESSAY' ? [] : newQuestion.options
+    };
+
+    if (payload.question_type === 'MCQ' && !payload.options.some(opt => opt.is_correct)) {
       alert("Please mark at least one correct answer!"); return;
     }
 
     try {
       if (editingId) {
-        await axios.put(`http://127.0.0.1:8000/api/questions/${editingId}/`, { ...newQuestion, exam: examId }, { headers });
+        await axios.put(`http://127.0.0.1:8000/api/questions/${editingId}/`, payload, { headers });
       } else {
-        await axios.post(`http://127.0.0.1:8000/api/questions/`, { ...newQuestion, exam: examId }, { headers });
+        await axios.post(`http://127.0.0.1:8000/api/questions/`, payload, { headers });
       }
       handleCancelEdit();
       fetchExamData();

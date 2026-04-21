@@ -1,5 +1,6 @@
 from rest_framework import serializers
-from .models import Exam, Question, Option, ExamResult
+from django.contrib.auth.models import User
+from .models import Exam, Question, Option, ExamResult, Profile
 
 class OptionSerializer(serializers.ModelSerializer):
     class Meta:
@@ -75,3 +76,15 @@ class ExamSubmissionSerializer(serializers.Serializer):
         passed = percentage >= exam.pass_mark
         
         return ExamResult.objects.create(user=user, exam=exam, score=score, is_passed=passed)
+
+class ProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Profile
+        fields = ['first_name', 'middle_name', 'last_name', 'section', 'school_year']
+
+class UserSerializer(serializers.ModelSerializer):
+    profile = ProfileSerializer()
+
+    class Meta:
+        model = User
+        fields = ['username', 'email', 'profile']

@@ -110,40 +110,40 @@ useEffect(() => {
 
       {/* Results Table */}
       <div className="overflow-x-auto">
-        <table className="w-full text-left border-collapse">
+        <table className="w-full text-center border-collapse border-2 border-black">
           <thead>
-            <tr className="border-b border-slate-100 text-slate-400 text-sm uppercase tracking-wider">
-              <th className="py-4 px-4 font-semibold">Student</th>
-              <th className="py-4 px-4 font-semibold">Section</th>
-              <th className="py-4 px-4 font-semibold">School Year</th>
-              <th className="py-4 px-4 font-semibold">Exam Title</th>
-              <th className="py-4 px-4 font-semibold text-center">Score</th>
-              <th className="py-4 px-4 font-semibold text-center">Status</th>
-              <th className="py-4 px-4 font-semibold">Date Submitted</th>
+            <tr className="text-black text-[17px] font-bold uppercase tracking-wider">
+              <th className="border-2 border-black py-4 px-4 text-left">Student</th>
+              <th className="border-2 border-black py-4 px-4">Section</th>
+              <th className="border-2 border-black py-4 px-4">School Year</th>
+              <th className="border-2 border-black py-4 px-4">Exam Title</th>
+              <th className="border-2 border-black py-4 px-4 text-center">Score</th>
+              <th className="border-2 border-black py-4 px-4 text-center">Status</th>
+              <th className="border-2 border-black py-4 px-4">Date Submitted</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-50">
+          <tbody>
             {filteredResults.map((res) => {
               const percentage = (res.score / res.total_questions) * 100;
               const isPassed = percentage >= 50;
 
               return (
                 <tr key={res.id} className="hover:bg-slate-50 transition-colors">
-                  <td className="py-4 px-4 font-medium text-slate-900">{res.student_name}</td>
-                  <td className="py-4 px-4 text-slate-600">{res.section}</td>
-                  <td className="py-4 px-4 text-slate-600">{res.school_year}</td>
-                  <td className="py-4 px-4 text-slate-600">{res.exam_title}</td>
-                  <td className="py-4 px-4 text-center font-bold text-indigo-600">
+                  <td className="border-2 border-black py-4 px-4 font-medium text-slate-900 text-left">{res.student_name}</td>
+                  <td className="border-2 border-black py-4 px-4 text-slate-600">{res.section}</td>
+                  <td className="border-2 border-black py-4 px-4 text-slate-600">{res.school_year}</td>
+                  <td className="border-2 border-black py-4 px-4 text-slate-600">{res.exam_title}</td>
+                  <td className="border-2 border-black py-4 px-4 text-center font-bold text-indigo-600">
                     {res.score} / {res.total_questions}
                   </td>
-                  <td className="py-4 px-4 text-center">
+                  <td className="border-2 border-black py-4 px-4 text-center">
                     <span className={`px-3 py-1 rounded-full text-xs font-bold ${
                       isPassed ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
                     }`}>
                       {isPassed ? 'PASSED' : 'FAILED'}
                     </span>
                   </td>
-                  <td className="py-4 px-4 text-slate-500 text-sm">{res.date}</td>
+                  <td className="border-2 border-black py-4 px-4 text-slate-500 text-sm">{res.date}</td>
                 </tr>
               );
             })}

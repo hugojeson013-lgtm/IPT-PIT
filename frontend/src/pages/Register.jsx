@@ -6,7 +6,7 @@ export default function Register() {
   const [formData, setFormData] = useState({
     username: '', password: '', email: '',
     first_name: '', middle_name: '', last_name: '',
-    section: '', school_year: ''
+    section: '', start_year: '2025', end_year: '2026'
   });
   const [error, setError] = useState('');
   const navigate = useNavigate();
@@ -16,18 +16,29 @@ export default function Register() {
     setError('');
 
     // ✅ VALIDATION (BLOCK N/A + EMPTY)
-    if (
-      !formData.section.trim() ||
-      !formData.school_year.trim() ||
-      formData.section.toLowerCase() === "n/a" ||
-      formData.school_year.toLowerCase() === "n/a"
-    ) {
-      setError("Section and School Year cannot be empty or 'N/A'");
+    if (!formData.section.trim() || formData.section.toLowerCase() === "n/a") {
+      setError("Section cannot be empty or 'N/A'");
       return;
     }
 
+    if (!formData.email.includes('@')) {
+      setError("Please enter a valid email address containing '@'.");
+      return;
+    }
+
+    const passwordRegex = /^(?=.*[a-zA-Z])(?=.*\d).{8,}$/;
+    if (!passwordRegex.test(formData.password)) {
+      setError("Password must be at least 8 characters and contain both letters and numbers.");
+      return;
+    }
+
+    const payload = {
+      ...formData,
+      school_year: `${formData.start_year}-${formData.end_year}`
+    };
+
     try {
-      await axios.post('http://127.0.0.1:8000/api/register/', formData);
+      await axios.post('http://127.0.0.1:8000/api/register/', payload);
       alert("Registration successful! Please login.");
       navigate('/');
     } catch (err) {
@@ -65,7 +76,7 @@ export default function Register() {
               placeholder="Username"
               onChange={(e) => setFormData({...formData, username: e.target.value})} />
 
-            <input type="email" className={inputStyle}
+            <input type="email" required className={inputStyle}
               placeholder="Email"
               onChange={(e) => setFormData({...formData, email: e.target.value})} />
           </div>
@@ -76,7 +87,7 @@ export default function Register() {
               placeholder="First Name"
               onChange={(e) => setFormData({...formData, first_name: e.target.value})} />
 
-            <input type="text" className={inputStyle}
+            <input type="text" required className={inputStyle}
               placeholder="Middle Name"
               onChange={(e) => setFormData({...formData, middle_name: e.target.value})} />
 
@@ -91,15 +102,24 @@ export default function Register() {
               placeholder="Section (e.g. BSIT-4A)"
               onChange={(e) => setFormData({...formData, section: e.target.value})} />
 
-            <input type="text" required className={inputStyle}
-              placeholder="School Year (e.g. 2025-2026)"
-              onChange={(e) => setFormData({...formData, school_year: e.target.value})} />
+            <div className="flex gap-2 items-center bg-white border border-slate-300 rounded-lg focus-within:ring-2 focus-within:ring-indigo-500 focus-within:border-indigo-500 transition px-2">
+              <select className="w-full py-3 bg-transparent outline-none cursor-pointer" value={formData.start_year} onChange={(e) => setFormData({...formData, start_year: e.target.value})}>
+                {Array.from({length: 15}, (_, i) => 2020 + i).map(y => <option key={y} value={y}>{y}</option>)}
+              </select>
+              <span className="text-slate-400 font-bold">-</span>
+              <select className="w-full py-3 bg-transparent outline-none cursor-pointer" value={formData.end_year} onChange={(e) => setFormData({...formData, end_year: e.target.value})}>
+                {Array.from({length: 15}, (_, i) => 2020 + i).map(y => <option key={y} value={y}>{y}</option>)}
+              </select>
+            </div>
           </div>
 
           {/* PASSWORD */}
-          <input type="password" required className={inputStyle}
-            placeholder="Password"
-            onChange={(e) => setFormData({...formData, password: e.target.value})} />
+          <div>
+            <input type="password" required className={inputStyle}
+              placeholder="Password"
+              onChange={(e) => setFormData({...formData, password: e.target.value})} />
+            <p className="text-[11px] text-slate-500 mt-1 ml-1 font-semibold">Min. 8 characters, must contain letters and numbers.</p>
+          </div>
 
           <button className="w-full bg-indigo-600 text-white py-3 rounded-lg">
             Register
