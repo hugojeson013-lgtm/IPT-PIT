@@ -6,9 +6,12 @@ from rest_framework.views import APIView
 from django.contrib.auth import authenticate
 from django.contrib.auth.models import User
 from rest_framework.authtoken.models import Token
+from rest_framework import serializers
+from rest_framework.decorators import api_view, permission_classes
+
 
 from .models import Exam, Question, Option, ExamResult, Profile
-from .serializers import ExamSerializer, ExamSubmissionSerializer, QuestionSerializer, UserSerializer
+from .serializers import ExamSerializer, ExamSubmissionSerializer, QuestionSerializer, UserSerializer, ProfileSerializer
 
 
 # --- AUTHENTICATION ---
@@ -24,6 +27,10 @@ def register_view(request):
 
     section = data.get('section', '').strip()
     school_year = data.get('school_year', '').strip()
+
+    address=data.get('address')
+    age=data.get('age')
+    birthday=data.get('birthday')
 
     # ✅ BLOCK INVALID INPUT
     if not section or section.lower() == 'n/a':
@@ -42,8 +49,12 @@ def register_view(request):
         first_name=data.get('first_name'),
         middle_name=data.get('middle_name', ''),
         last_name=data.get('last_name'),
+        email=email, # Ensure the email is also saved to the profile if needed
         section=section,
-        school_year=school_year
+        school_year=school_year,
+        address=address,
+        age=age,
+        birthday=birthday
     )
 
     return Response({'message': 'Registration successful'}, status=201)
@@ -69,39 +80,74 @@ def login_view(request):
     return Response({'error': 'Invalid Credentials'}, status=status.HTTP_400_BAD_REQUEST)
 
 
+@api_view(['GET', 'PUT', 'PATCH'])
+@permission_classes([IsAuthenticated])
+def user_profile(request):
+    user = request.user
+    if request.method == 'GET':
+        serializer = UserSerializer(user)
+        return Response(serializer.data)
+    
+    # Handle updates
+    profile = getattr(user, 'profile', None)
+    if not profile:
+        return Response({"error": "Profile not found"}, status=404)
+        
+    # We only want to update profile fields
+    profile_data = request.data.get('profile', request.data)
+    profile_serializer = ProfileSerializer(profile, data=profile_data, partial=True)
+    
+    if profile_serializer.is_valid():
+        profile_serializer.save()
+        return Response(UserSerializer(user).data)
+    return Response(profile_serializer.errors, status=400)
+
+
 # --- DROPDOWN FILTERS ---
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def admin_filter_options(request):
+
+    # 🔐 Admin-only access
     if not request.user.is_staff:
-        return Response(status=403)
-    
+        return Response({"detail": "Forbidden"}, status=403)
+
+    # 📊 Get all exam results
     results = ExamResult.objects.select_related('user__profile', 'exam')
 
     sections = set()
     years = set()
     exams = set()
 
-    for r in results:
-        prof = getattr(r.user, 'profile', None)
+    # 🔄 Extract unique values
+    for result in results:
+        profile = getattr(result.user, 'profile', None)
 
-        if prof:
-            if prof.section and prof.section.strip():
-                sections.add(prof.section.strip())
+        # ---- Sections ----
+        if profile and profile.section:
+            section = profile.section.strip()
+            if section:
+                sections.add(section)
 
-            if prof.school_year and prof.school_year.strip():
-                years.add(prof.school_year.strip())
+        # ---- School Years ----
+        if profile and profile.school_year:
+            year = profile.school_year.strip()
+            if year:
+                years.add(year)
 
-        if r.exam and r.exam.title:
-            exams.add(r.exam.title.strip())
+        # ---- Exams ----
+        if result.exam and result.exam.title:
+            exam_title = result.exam.title.strip()
+            if exam_title:
+                exams.add(exam_title)
 
+    # 📤 Return sorted response
     return Response({
-        "sections": sorted(list(sections)),
-        "years": sorted(list(years)),
-        "exams": sorted(list(exams)),
+        "sections": sorted(sections),
+        "years": sorted(years),
+        "exams": sorted(exams),
     })
-
 
 # --- VIEWSETS (CRUD) ---
 
@@ -120,16 +166,36 @@ class QuestionViewSet(viewsets.ModelViewSet):
 
 class SubmitExamView(APIView):
     permission_classes = [IsAuthenticated]
+
     def post(self, request):
-        serializer = ExamSubmissionSerializer(data=request.data, context={'request': request})
+        serializer = ExamSubmissionSerializer(
+            data=request.data,
+            context={'request': request}
+        )
+
         if serializer.is_valid():
-            result = serializer.save()
-            return Response({
-                "score": result.score, 
-                "total": result.exam.questions.count(),
-                "is_passed": result.is_passed
-            }, status=status.HTTP_201_CREATED)
+            try:
+                result = serializer.save()
+                return Response({
+                    "score": result.score,
+                    "total": result.exam.questions.count(),
+                    "is_passed": result.is_passed
+                }, status=status.HTTP_201_CREATED)
+
+            # 🚫 HANDLE "ALREADY TAKEN" ERROR
+            except serializers.ValidationError as e:
+                return Response({
+                    "error": str(e.detail[0])
+                }, status=400)
+
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def has_taken_exam(request, exam_id):
+    exists = ExamResult.objects.filter(user=request.user, exam_id=exam_id).exists()
+    return Response({"taken": exists})
 
 
 # --- RESULTS & REPORTING ---
@@ -182,29 +248,3 @@ def student_results_list(request):
         } for r in results
     ]
     return Response(data)
-
-@api_view(['GET', 'PUT'])
-@permission_classes([IsAuthenticated])
-def profile_view(request):
-    user = request.user
-    if request.method == 'GET':
-        serializer = UserSerializer(user)
-        return Response(serializer.data)
-    
-    elif request.method == 'PUT':
-        data = request.data
-        user.email = data.get('email', user.email)
-        user.save()
-        
-        profile = getattr(user, 'profile', None)
-        if profile:
-            profile_data = data.get('profile', {})
-            profile.first_name = profile_data.get('first_name', profile.first_name)
-            profile.middle_name = profile_data.get('middle_name', profile.middle_name)
-            profile.last_name = profile_data.get('last_name', profile.last_name)
-            profile.section = profile_data.get('section', profile.section)
-            profile.school_year = profile_data.get('school_year', profile.school_year)
-            profile.save()
-            
-        serializer = UserSerializer(user)
-        return Response(serializer.data)
